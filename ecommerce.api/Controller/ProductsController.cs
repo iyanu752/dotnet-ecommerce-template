@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace ecommerce.api
 {
@@ -7,156 +8,115 @@ namespace ecommerce.api
     [ApiController]
     public class ProductsController : ControllerBase
     {
-        [HttpGet]
-        public IActionResult GetProduct()
+        private readonly AppDbContext _context;
+
+        public ProductsController(AppDbContext context)
         {
-            var products = new List<Product>
+            _context = context;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetProduct()
+        {
+            var products = await _context.Products.ToListAsync();
+
+            var results = products.Select(p => new ProductDto
             {
-                new Product
-                {
-                    Id = 1,
-                    Name = "Pc",
-                    Description = "High end spec pc",
-                    Price = 12.99m,
-                    Stock = 10
-                },
-                new Product
-                {
-                    Id = 2,
-                    Name = "PlayStation 5",
-                    Description = "Brand new playstation 5",
-                    Price = 900.99m,
-                    Stock = 10
-                },
-                new Product
-                {
-                    Id = 3,
-                    Name = "xbox 360",
-                    Description = "Fairly used xbox 360 in mint condition",
-                    Price = 500.99m,
-                    Stock = 10
-                },
-            };
-            return Ok(products);
+                Id = p.Id,
+                Name = p.Name,
+                Description = p.Description,
+                Price = p.Price,
+                Stock = p.Stock
+            });
+
+            return Ok(results);
+
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetProductById(int id)
+        public async Task<IActionResult> GetProductById(int id)
         {
-             var products = new List<Product>
-            {
-                new Product
-                {
-                    Id = 1,
-                    Name = "Pc",
-                    Description = "High end spec pc",
-                    Price = 12.99m,
-                    Stock = 10
-                },
-                new Product
-                {
-                    Id = 2,
-                    Name = "PlayStation 5",
-                    Description = "Brand new playstation 5",
-                    Price = 900.99m,
-                    Stock = 10
-                },
-                new Product
-                {
-                    Id = 3,
-                    Name = "xbox 360",
-                    Description = "Fairly used xbox 360 in mint condition",
-                    Price = 500.99m,
-                    Stock = 10
-                },
-            };
 
-            var product = products.FirstOrDefault( p => p.Id == id);
+            var product = await _context.Products.FindAsync(id);
             if (product is null)
             {
                 return NotFound();
             }
-            return Ok(product);
-            
+
+            var result = new ProductDto
+            {
+                Id = product.Id,
+                Name = product.Name,
+                Description = product.Description,
+                Stock = product.Stock
+            };
+
+            return Ok(result);
+
         }
 
         [HttpPost]
-        public IActionResult CreateProduct([FromBody] Product product)
+        public async Task<IActionResult> CreateProduct([FromBody] CreateProductDto createProductDto)
         {
-            if( product is null )
+            var product = new Product
             {
-                return BadRequest();
-            }
-            product.Id = new Random().Next(1000, 9999);
-            product.CreatedAt = DateTime.UtcNow;
+                Name = createProductDto.Name,
+                Description = createProductDto.Description,
+                Price = createProductDto.Price,
+                Stock = createProductDto.Stock
+            };
+
+            _context.Products.Add(product);
+
+            await _context.SaveChangesAsync();
+
+            var result = new ProductDto
+            {
+                Id = product.Id,
+                Name = product.Name,
+                Description = product.Description,
+                Stock = product.Stock
+            };
+
             return CreatedAtAction(
                 nameof(GetProductById),
-                new{id = product.Id},
-                product
+                new { id = product.Id },
+                result
             );
 
         }
 
         [HttpPut("{id}")]
-        public IActionResult UpdateProduct(int id , [FromBody] Product updatedProduct)
+        public async Task<IActionResult> UpdateProduct(int id, [FromBody] UpdateProductDto updatedProductdto)
         {
-            if (updatedProduct is null)
-            {
-                return BadRequest();
-            }
-            var product = new List<Product>
-            {
-              new Product { Id = 1 , Name = "Lenovo leigon", Price = 1500.00m, Stock=30, CreatedAt=DateTime.UtcNow, Description="High performance gaming pc"}  
-            };
-            var existingProducts = product.FirstOrDefault(p=> p.Id == id);
-            if(existingProducts is null)
+     
+            var existingProducts = await _context.Products.FindAsync(id);
+
+            if (existingProducts is null)
             {
                 return NotFound();
-            } 
-            existingProducts.Name = updatedProduct.Name;
-            existingProducts.Description = updatedProduct.Description;
-            existingProducts.Price = updatedProduct.Price;
-            existingProducts.Stock = updatedProduct.Stock;
+            }
+
+            existingProducts.Name = updatedProductdto.Name;
+            existingProducts.Description = updatedProductdto.Description;
+            existingProducts.Price = updatedProductdto.Price;
+            existingProducts.Stock = updatedProductdto.Stock;
+            await _context.SaveChangesAsync();
             return NoContent();
         }
 
         [HttpDelete("{id}")]
-        public IActionResult DeleteProduct(int id)
+        public async Task<IActionResult> DeleteProduct(int id)
         {
-             var products = new List<Product>
-            {
-                new Product
-                {
-                    Id = 1,
-                    Name = "Pc",
-                    Description = "High end spec pc",
-                    Price = 12.99m,
-                    Stock = 10
-                },
-                new Product
-                {
-                    Id = 2,
-                    Name = "PlayStation 5",
-                    Description = "Brand new playstation 5",
-                    Price = 900.99m,
-                    Stock = 10
-                },
-                new Product
-                {
-                    Id = 3,
-                    Name = "xbox 360",
-                    Description = "Fairly used xbox 360 in mint condition",
-                    Price = 500.99m,
-                    Stock = 10
-                },
-            };
+            var product = await _context.Products.FindAsync(id);
 
-            var product = products.FirstOrDefault(p => p.Id == id);
             if (product is null)
             {
                 return NotFound();
             }
-            products.Remove(product);
+
+            _context.Products.Remove(product);
+            await _context.SaveChangesAsync();
             return NoContent();
 
         }

@@ -1,3 +1,4 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,10 +10,12 @@ namespace ecommerce.api
     public class ProductsController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IMapper _mapper;
 
-        public ProductsController(AppDbContext context)
+        public ProductsController(AppDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
         [HttpGet]
@@ -20,16 +23,9 @@ namespace ecommerce.api
         {
             var products = await _context.Products.ToListAsync();
 
-            var results = products.Select(p => new ProductDto
-            {
-                Id = p.Id,
-                Name = p.Name,
-                Description = p.Description,
-                Price = p.Price,
-                Stock = p.Stock
-            });
+            var result = _mapper.Map<IEnumerable<ProductDto>>(products);
 
-            return Ok(results);
+            return Ok(result);
 
         }
 
@@ -43,40 +39,22 @@ namespace ecommerce.api
                 return NotFound();
             }
 
-            var result = new ProductDto
-            {
-                Id = product.Id,
-                Name = product.Name,
-                Description = product.Description,
-                Stock = product.Stock
-            };
+            var result = _mapper.Map<ProductDto>(product);
 
             return Ok(result);
 
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateProduct([FromBody] CreateProductDto createProductDto)
+        public async Task<IActionResult> CreateProduct(CreateProductDto createProductDto)
         {
-            var product = new Product
-            {
-                Name = createProductDto.Name,
-                Description = createProductDto.Description,
-                Price = createProductDto.Price,
-                Stock = createProductDto.Stock
-            };
+            var product = _mapper.Map<Product>(createProductDto);
 
             _context.Products.Add(product);
 
             await _context.SaveChangesAsync();
 
-            var result = new ProductDto
-            {
-                Id = product.Id,
-                Name = product.Name,
-                Description = product.Description,
-                Stock = product.Stock
-            };
+            var result = _mapper.Map<ProductDto>(product);
 
             return CreatedAtAction(
                 nameof(GetProductById),
@@ -87,7 +65,7 @@ namespace ecommerce.api
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateProduct(int id, [FromBody] UpdateProductDto updatedProductdto)
+        public async Task<IActionResult> UpdateProduct(int id, UpdateProductDto updatedProductdto)
         {
      
             var existingProducts = await _context.Products.FindAsync(id);
@@ -97,12 +75,11 @@ namespace ecommerce.api
                 return NotFound();
             }
 
-            existingProducts.Name = updatedProductdto.Name;
-            existingProducts.Description = updatedProductdto.Description;
-            existingProducts.Price = updatedProductdto.Price;
-            existingProducts.Stock = updatedProductdto.Stock;
+            _mapper.Map(updatedProductdto, existingProducts);
+
+            var result = _mapper.Map<ProductDto>(existingProducts);
             await _context.SaveChangesAsync();
-            return NoContent();
+            return Ok(result);
         }
 
         [HttpDelete("{id}")]

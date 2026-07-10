@@ -11,13 +11,13 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(
-    builder.Configuration.GetConnectionString("DefaultConnection")
-    ));
+builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddFluentValidationAutoValidation();
-builder.Services.AddValidatorsFromAssemblyContaining<ProductDtoValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<CreateProductDtoValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<UpdateProductDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<ProductDtoValidator>();
 builder.Services.AddAutoMapper(typeof(ProductProfile));
+builder.Services.AddScoped<IProductService, ProductService>();
 
 var app = builder.Build();
 // Configure the HTTP request pipeline.

@@ -9,23 +9,19 @@ namespace ecommerce.api
     [ApiController]
     public class ProductsController : ControllerBase
     {
-        private readonly AppDbContext _context;
-        private readonly IMapper _mapper;
+        private readonly IProductService _productService;
 
-        public ProductsController(AppDbContext context, IMapper mapper)
+        public ProductsController(IProductService productService)
         {
-            _context = context;
-            _mapper = mapper;
+            _productService = productService;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetProduct()
         {
-            var products = await _context.Products.ToListAsync();
+            var products = await _productService.GetAllProductsAsync();
 
-            var result = _mapper.Map<IEnumerable<ProductDto>>(products);
-
-            return Ok(result);
+            return Ok(products);
 
         }
 
@@ -33,33 +29,26 @@ namespace ecommerce.api
         public async Task<IActionResult> GetProductById(int id)
         {
 
-            var product = await _context.Products.FindAsync(id);
-            if (product is null)
+            var product = await _productService.GetProductById(id);
+            if(product == null)
             {
                 return NotFound();
             }
 
-            var result = _mapper.Map<ProductDto>(product);
-
-            return Ok(result);
+            return Ok(product);
 
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateProduct(CreateProductDto createProductDto)
         {
-            var product = _mapper.Map<Product>(createProductDto);
+            var product = _productService.CreateProductAsync(createProductDto);
 
-            _context.Products.Add(product);
-
-            await _context.SaveChangesAsync();
-
-            var result = _mapper.Map<ProductDto>(product);
 
             return CreatedAtAction(
                 nameof(GetProductById),
                 new { id = product.Id },
-                result
+                product
             );
 
         }
@@ -68,32 +57,24 @@ namespace ecommerce.api
         public async Task<IActionResult> UpdateProduct(int id, UpdateProductDto updatedProductdto)
         {
      
-            var existingProducts = await _context.Products.FindAsync(id);
+            var existingProducts = await _productService.UpdateProductsAsync(id, updatedProductdto);
 
             if (existingProducts is null)
             {
                 return NotFound();
             }
-
-            _mapper.Map(updatedProductdto, existingProducts);
-
-            var result = _mapper.Map<ProductDto>(existingProducts);
-            await _context.SaveChangesAsync();
-            return Ok(result);
+            return Ok(existingProducts);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
-            var product = await _context.Products.FindAsync(id);
+            var deleted = await _productService.DeleteProductAsync(id);
 
-            if (product is null)
+            if (!deleted)
             {
                 return NotFound();
             }
-
-            _context.Products.Remove(product);
-            await _context.SaveChangesAsync();
             return NoContent();
 
         }

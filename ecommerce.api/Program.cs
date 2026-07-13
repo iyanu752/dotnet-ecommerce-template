@@ -20,6 +20,7 @@ builder.Services.AddAutoMapper(typeof(ProductProfile));
 builder.Services.AddScoped<IProductService, ProductService>();
 
 var app = builder.Build();
+app.UseMiddleware<ExceptionHandling>();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

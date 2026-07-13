@@ -79,6 +79,12 @@ namespace ecommerce.api
 
         }
 
+        [HttpGet("test-error")]
+        public IActionResult TestError()
+        {
+            throw new Exception ("This is a test exception from products controller");
+        }
+
 
     }
 }

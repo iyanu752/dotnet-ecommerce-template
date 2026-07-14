@@ -17,11 +17,18 @@ namespace ecommerce.api
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetProduct()
+        public async Task<IActionResult> GetProduct([FromQuery] ProductQueryParameters query)
         {
-            var products = await _productService.GetAllProductsAsync();
+            var (data, totalCount) = await _productService.GetAllProductsAsync(query);
+            var response =  new
+            {
+                data,
+                totalCount,
+                query.Page,
+                query.PageSize
+            };
 
-            return Ok(products);
+            return Ok(response);
 
         }
 

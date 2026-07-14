@@ -4,7 +4,8 @@ namespace ecommerce.api;
 
 public interface IProductService
 {
-    Task<IEnumerable<ProductDto>> GetAllProductsAsync();
+    Task <(IEnumerable<ProductDto> Data, int TotalCount)>GetAllProductsAsync(ProductQueryParameters query);
+
     Task<ProductDto?> GetProductById(int id);
 
     Task<ProductDto> CreateProductAsync(CreateProductDto createProductDto);

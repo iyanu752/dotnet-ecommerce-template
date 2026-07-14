@@ -1,6 +1,7 @@
 using System;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 namespace ecommerce.api;
 
 public class ProductService : IProductService
@@ -12,26 +13,64 @@ public class ProductService : IProductService
     {
         _context = context;
         _mapper = mapper;
-        
+
     }
 
-    public async Task<IEnumerable<ProductDto>> GetAllProductsAsync()
+    public async Task<(IEnumerable<ProductDto> Data, int TotalCount)> GetAllProductsAsync(ProductQueryParameters query)
     {
-        var products = await _context.Products.ToListAsync();
-        return _mapper.Map<IEnumerable<ProductDto>>(products);
+        var productQuery =  _context.Products.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(query.search))
+        {
+            productQuery = productQuery.Where(p => p.Name.Contains(query.search));
+        }
+
+        if(query.MinPrice.HasValue)
+        {
+            productQuery = productQuery.Where(p => p.Price >= query.MinPrice.Value );
+        } 
+
+        if(query.MaxPrice.HasValue)
+        {
+            productQuery = productQuery.Where(p => p.Price <= query.MaxPrice.Value);
+        }
+
+        var totalCount = await productQuery.CountAsync();
+
+        productQuery = query.SortBy?.ToLower() switch
+        {
+            "price" => query.Decending
+            ? productQuery.OrderByDescending(p => p.Price)
+            : productQuery.OrderBy(p => p.Price),
+
+            "name" => query.Decending
+            ? productQuery.OrderByDescending(P => P.Name)
+            :productQuery.OrderBy(p => p.Name),
+
+            _ => productQuery.OrderBy(p => p.Id)
+        };
+
+        var products = await productQuery
+        .Skip((query.Page -1) * query.PageSize)
+        .Take(query.PageSize)
+        .ToListAsync();
+
+        var data = _mapper.Map<IEnumerable<ProductDto>>(products);
+        return(data, totalCount);
+
     }
 
     public async Task<ProductDto?> GetProductById(int id)
     {
         var product = await _context.Products.FindAsync(id);
-        if(product == null)
+        if (product == null)
         {
             return null;
         }
         return _mapper.Map<ProductDto>(product);
     }
 
-    public async Task<ProductDto> CreateProductAsync (CreateProductDto createProductDto)
+    public async Task<ProductDto> CreateProductAsync(CreateProductDto createProductDto)
     {
         var product = _mapper.Map<Product>(createProductDto);
         _context.Products.Add(product);
@@ -39,7 +78,7 @@ public class ProductService : IProductService
         return _mapper.Map<ProductDto>(product);
     }
 
-    public async Task<ProductDto?> UpdateProductsAsync (int id, UpdateProductDto updateProductDto)
+    public async Task<ProductDto?> UpdateProductsAsync(int id, UpdateProductDto updateProductDto)
     {
         var product = await _context.Products.FindAsync(id);
         if (product == null)
@@ -54,7 +93,7 @@ public class ProductService : IProductService
     public async Task<bool> DeleteProductAsync(int id)
     {
         var product = await _context.Products.FindAsync(id);
-        if ( product == null)
+        if (product == null)
         {
             return false;
         }

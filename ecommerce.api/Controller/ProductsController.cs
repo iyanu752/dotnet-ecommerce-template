@@ -47,7 +47,7 @@ namespace ecommerce.api
 
         }
 
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> CreateProduct(CreateProductDto createProductDto)
         {
@@ -62,7 +62,7 @@ namespace ecommerce.api
 
         }
 
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateProduct(int id, UpdateProductDto updatedProductdto)
         {
@@ -76,7 +76,7 @@ namespace ecommerce.api
             return Ok(existingProducts);
         }
 
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {

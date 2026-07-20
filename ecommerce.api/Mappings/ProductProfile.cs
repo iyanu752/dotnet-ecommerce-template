@@ -16,6 +16,9 @@ public class ProductProfile : Profile
         CreateMap<Cart, CartDto>()
         .ForMember(dest => dest.CartId, opt => opt.MapFrom(src => src.UserId))
         .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.Items));
+
+        CreateMap<OrderItem, OrderItemDto>();
+        CreateMap<Order, OrderDto>();
     }
 
 

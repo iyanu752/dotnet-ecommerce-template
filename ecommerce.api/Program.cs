@@ -7,8 +7,19 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi;
-var builder = WebApplication.CreateBuilder(args);
+using Serilog;
 
+Log.Logger = new LoggerConfiguration()
+.MinimumLevel.Information()
+.WriteTo.Console()
+.WriteTo.File(
+    path: "Logs/lOG.txt",
+    rollingInterval: RollingInterval.Day
+)
+.CreateLogger();
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSerilog();
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddControllers();
@@ -78,6 +89,7 @@ builder.Services.AddAuthentication(
     });
 
 var app = builder.Build();
+app.UseSerilogRequestLogging();
 app.UseMiddleware<ExceptionHandling>();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

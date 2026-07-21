@@ -8,29 +8,31 @@ public class ProductService : IProductService
 {
     private readonly AppDbContext _context;
     private readonly IMapper _mapper;
+    private readonly ILogger<ProductService> _logger;
 
-    public ProductService(AppDbContext context, IMapper mapper)
+    public ProductService(AppDbContext context, IMapper mapper, ILogger<ProductService> logger)
     {
         _context = context;
         _mapper = mapper;
+        _logger = logger;
 
     }
 
     public async Task<(IEnumerable<ProductDto> Data, int TotalCount)> GetAllProductsAsync(ProductQueryParameters query)
     {
-        var productQuery =  _context.Products.AsQueryable();
+        var productQuery = _context.Products.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(query.search))
         {
             productQuery = productQuery.Where(p => p.Name.Contains(query.search));
         }
 
-        if(query.MinPrice.HasValue)
+        if (query.MinPrice.HasValue)
         {
-            productQuery = productQuery.Where(p => p.Price >= query.MinPrice.Value );
-        } 
+            productQuery = productQuery.Where(p => p.Price >= query.MinPrice.Value);
+        }
 
-        if(query.MaxPrice.HasValue)
+        if (query.MaxPrice.HasValue)
         {
             productQuery = productQuery.Where(p => p.Price <= query.MaxPrice.Value);
         }
@@ -45,18 +47,18 @@ public class ProductService : IProductService
 
             "name" => query.Decending
             ? productQuery.OrderByDescending(P => P.Name)
-            :productQuery.OrderBy(p => p.Name),
+            : productQuery.OrderBy(p => p.Name),
 
             _ => productQuery.OrderBy(p => p.Id)
         };
 
         var products = await productQuery
-        .Skip((query.Page -1) * query.PageSize)
+        .Skip((query.Page - 1) * query.PageSize)
         .Take(query.PageSize)
         .ToListAsync();
-
+        _logger.LogInformation("Retrieving Products with pagination");
         var data = _mapper.Map<IEnumerable<ProductDto>>(products);
-        return(data, totalCount);
+        return (data, totalCount);
 
     }
 
@@ -65,6 +67,7 @@ public class ProductService : IProductService
         var product = await _context.Products.FindAsync(id);
         if (product == null)
         {
+            _logger.LogWarning("Failed to get product by Id. Product with ID {ProductId} was not found", id);
             return null;
         }
         return _mapper.Map<ProductDto>(product);
@@ -72,9 +75,11 @@ public class ProductService : IProductService
 
     public async Task<ProductDto> CreateProductAsync(CreateProductDto createProductDto)
     {
+        _logger.LogInformation("Creating product with name: {ProductName}", createProductDto.Name);
         var product = _mapper.Map<Product>(createProductDto);
         _context.Products.Add(product);
         await _context.SaveChangesAsync();
+        _logger.LogInformation("Product created successfully with ID: {ProductID}", product.Id);
         return _mapper.Map<ProductDto>(product);
     }
 
@@ -83,6 +88,7 @@ public class ProductService : IProductService
         var product = await _context.Products.FindAsync(id);
         if (product == null)
         {
+            _logger.LogWarning("Product update failed. Product with ID {ProductId} was not found", id);
             return null;
         }
         _mapper.Map(updateProductDto, product);
@@ -95,6 +101,7 @@ public class ProductService : IProductService
         var product = await _context.Products.FindAsync(id);
         if (product == null)
         {
+            _logger.LogWarning("Product delete failed. Product with ID {ProductId} was not found", id);
             return false;
         }
         _context.Products.Remove(product);
